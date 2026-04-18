@@ -6,7 +6,7 @@ from flask import Flask
 import os
 
 # 🔹 TOKEN (use variável de ambiente no Render)
-TOKEN = os.getenv("TOKEN")
+TOKEN = "8101772535:AAEp4qLZf2zvM0TNPcMiEi7qwsf_ym1tsrg"
 URL_TELEGRAM = f"https://api.telegram.org/bot{TOKEN}"
 
 # 🔹 API ANA
