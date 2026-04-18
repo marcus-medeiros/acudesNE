@@ -37,7 +37,11 @@ def get_menu():
         "resize_keyboard": True
     }
 
-
+# =========================
+# MENSAGEM DO MENU
+# =========================
+def add_name():
+    return "📌 *Selecione uma opção abaixo:*\n\n_by: Marcus (mvm)"
 # =========================
 # 🔹 UTIL
 # =========================
@@ -165,7 +169,7 @@ def executar_comando(texto):
         ]
 
     else:
-        return "👆 Use o menu abaixo para escolher uma opção"
+        return add_name()
 
 
 # =========================
