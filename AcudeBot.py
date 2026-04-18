@@ -5,7 +5,7 @@ import threading
 from flask import Flask
 import os
 
-# 🔹 TOKEN (use variável de ambiente no Render)
+# 🔹 TOKEN (coloque no Render como variável de ambiente)
 TOKEN = "8101772535:AAEp4qLZf2zvM0TNPcMiEi7qwsf_ym1tsrg"
 URL_TELEGRAM = f"https://api.telegram.org/bot{TOKEN}"
 
@@ -13,15 +13,29 @@ URL_TELEGRAM = f"https://api.telegram.org/bot{TOKEN}"
 URL_ANA = "https://www.ana.gov.br/sar/restportal/api/retornaMedicoes"
 
 # 🔹 FAVORITOS
-FAV_PB = ["FARINHA", "MAE DAGUA", "COREMAS", "JATOBA"]
-FAV_RN = ["ARMANDO RIBEIRO", "OITICICA", "UMARI"]
+FAV_PB = ["FARINHA","MÃE D'ÁGUA","CUREMA", "JATOBÁ I"]
+FAV_RN = ["ARMANDO RIBEIRO", "OITICICA", "UMARÍ"]
 
-# 🔹 FLASK (abre porta pro Render)
+# 🔹 FLASK
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "🤖 Bot de Açudes rodando!"
+    return "🤖 Bot rodando!"
+
+
+# =========================
+# 🔹 MENU
+# =========================
+def get_menu():
+    return {
+        "keyboard": [
+            ["📊 AÇUDES PB", "📊 AÇUDES RN"],
+            ["⭐ PB FAVORITOS", "⭐ RN FAVORITOS"],
+            ["📍 AÇUDES", "⭐ FAVORITOS"]
+        ],
+        "resize_keyboard": True
+    }
 
 
 # =========================
@@ -84,46 +98,57 @@ def get_updates(offset=None):
     return requests.get(url, params=params, timeout=15).json()
 
 
-def send_message(chat_id, text):
+def send_message(chat_id, text, keyboard=None):
     url = f"{URL_TELEGRAM}/sendMessage"
-    data = {"chat_id": chat_id, "text": text}
-    requests.post(url, data=data, timeout=10)
+
+    data = {
+        "chat_id": chat_id,
+        "text": text
+    }
+
+    if keyboard:
+        data["reply_markup"] = keyboard
+
+    requests.post(url, json=data, timeout=10)
 
 
 def enviar_resposta(chat_id, resposta):
+    menu = get_menu()
+
     if isinstance(resposta, list):
         for msg in resposta:
             partes = dividir_mensagem(msg)
             for p in partes:
-                send_message(chat_id, p)
+                send_message(chat_id, p, menu)
     else:
         partes = dividir_mensagem(resposta)
         for p in partes:
-            send_message(chat_id, p)
+            send_message(chat_id, p, menu)
 
 
 # =========================
-# 🔹 COMANDOS
+# 🔹 COMANDOS / MENU
 # =========================
-def executar_comando(comando):
+def executar_comando(texto):
+    comando = texto.upper()
 
-    if comando == "/acudespb":
+    if comando in ["📊 AÇUDES PB", "/ACUDESPB"]:
         pb = "\n".join(get_acudes("PB"))
         return f"📊 AÇUDES PB\n\n{pb}"
 
-    elif comando == "/acudespbfav":
-        pb = "\n".join(get_acudes("PB", "fav"))
-        return f"⭐ AÇUDES PB (FAVORITOS)\n\n{pb}"
-
-    elif comando == "/acudesrn":
+    elif comando in ["📊 AÇUDES RN", "/ACUDESRN"]:
         rn = "\n".join(get_acudes("RN"))
         return f"📊 AÇUDES RN\n\n{rn}"
 
-    elif comando == "/acudesrnfav":
+    elif comando in ["⭐ PB FAVORITOS", "/ACUDESPB FAV"]:
+        pb = "\n".join(get_acudes("PB", "fav"))
+        return f"⭐ AÇUDES PB (FAVORITOS)\n\n{pb}"
+
+    elif comando in ["⭐ RN FAVORITOS", "/ACUDESRNFAV"]:
         rn = "\n".join(get_acudes("RN", "fav"))
         return f"⭐ AÇUDES RN (FAVORITOS)\n\n{rn}"
 
-    elif comando == "/acudes":
+    elif comando in ["📍 TODOS", "/ACUDES"]:
         pb = "\n".join(get_acudes("PB"))
         rn = "\n".join(get_acudes("RN"))
         return [
@@ -131,7 +156,7 @@ def executar_comando(comando):
             f"📊 AÇUDES RN\n\n{rn}"
         ]
 
-    elif comando == "/acudesfav":
+    elif comando in ["⭐ FAVORITOS", "/ACUDESFAV"]:
         pb = "\n".join(get_acudes("PB", "fav"))
         rn = "\n".join(get_acudes("RN", "fav"))
         return [
@@ -140,22 +165,21 @@ def executar_comando(comando):
         ]
 
     else:
-        return "Use /acudes para ver os dados"
+        return "👆 Use o menu abaixo para escolher uma opção"
 
 
 # =========================
-# 🔹 LOOP DO BOT (THREAD)
+# 🔹 LOOP DO BOT
 # =========================
 def rodar_bot():
     update_id = None
-    print("🤖 Bot rodando (thread)...")
+    print("🤖 Bot rodando...")
 
     while True:
         try:
             updates = get_updates(update_id)
 
             if not updates.get("ok"):
-                print("Erro Telegram:", updates)
                 time.sleep(1)
                 continue
 
@@ -177,7 +201,7 @@ def rodar_bot():
             time.sleep(0.5)
 
         except Exception as e:
-            print("Erro geral:", e)
+            print("Erro:", e)
             time.sleep(2)
 
 
@@ -185,10 +209,8 @@ def rodar_bot():
 # 🔹 START
 # =========================
 if __name__ == "__main__":
-    # 🔹 inicia bot em paralelo
     t = threading.Thread(target=rodar_bot)
     t.start()
 
-    # 🔹 porta dinâmica do Render
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
