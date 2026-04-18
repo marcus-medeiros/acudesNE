@@ -87,7 +87,7 @@ def get_acudes(uf, filtro=None):
         percentual = d.get("volumeUtil") or "-"
         data = d.get("data") or "-"
 
-        linha = f"{nome} ({cidade}): {volume} hm³ ({percentual}%) - {data}"
+        linha = f"{nome} ({cidade}): ({percentual}%) - {data}"
         resultado.append(linha)
 
     return resultado
