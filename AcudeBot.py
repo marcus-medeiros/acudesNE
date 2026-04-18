@@ -10,8 +10,8 @@ URL_TELEGRAM = f"https://api.telegram.org/bot{TOKEN}"
 URL_ANA = "https://www.ana.gov.br/sar/restportal/api/retornaMedicoes"
 
 # 🔹 FAVORITOS
-FAV_PB = ["FARINHA", "MÃE D'ÁGUA"," CUREMA", "JATOBÁ I"]
-FAV_RN = ["ARMANDO RIBEIRO", "OITICICA", "UMARI"]
+FAV_PB = ["FARINHA", "MÃE D'ÁGUA","CUREMA", "JATOBÁ I"]
+FAV_RN = ["ARMANDO RIBEIRO", "OITICICA", "UMARÍ"]
 
 
 # =========================
