@@ -1,17 +1,27 @@
 import requests
 from datetime import datetime
 import time
+import threading
+from flask import Flask
+import os
 
-# 🔹 SEU TOKEN AQUI
-TOKEN = "8101772535:AAEp4qLZf2zvM0TNPcMiEi7qwsf_ym1tsrg"
+# 🔹 TOKEN (use variável de ambiente no Render)
+TOKEN = os.getenv("TOKEN")
 URL_TELEGRAM = f"https://api.telegram.org/bot{TOKEN}"
 
 # 🔹 API ANA
 URL_ANA = "https://www.ana.gov.br/sar/restportal/api/retornaMedicoes"
 
 # 🔹 FAVORITOS
-FAV_PB = ["FARINHA", "MÃE D'ÁGUA","CUREMA", "JATOBÁ I"]
-FAV_RN = ["ARMANDO RIBEIRO", "OITICICA", "UMARÍ"]
+FAV_PB = ["FARINHA", "MAE DAGUA", "COREMAS", "JATOBA"]
+FAV_RN = ["ARMANDO RIBEIRO", "OITICICA", "UMARI"]
+
+# 🔹 FLASK (abre porta pro Render)
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "🤖 Bot de Açudes rodando!"
 
 
 # =========================
@@ -130,26 +140,15 @@ def executar_comando(comando):
         ]
 
     else:
-        return (
-            "by: Marcus Vinícius 🧢\n" \
-            "\n"
-            "Comandos:\n"
-            "- /acudespb\n"
-            "- /acudespbfav\n"
-            "- /acudesrn\n"
-            "- /acudesrnfav\n"
-            "- /acudes\n"
-            "- /acudesfav"
-        )
+        return "Use /acudes para ver os dados"
 
 
 # =========================
-# 🔹 LOOP PRINCIPAL
+# 🔹 LOOP DO BOT (THREAD)
 # =========================
-def main():
+def rodar_bot():
     update_id = None
-
-    print("🤖 Bot rodando...")
+    print("🤖 Bot rodando (thread)...")
 
     while True:
         try:
@@ -170,7 +169,7 @@ def main():
                 chat_id = message["chat"]["id"]
                 text = message.get("text", "")
 
-                print("Mensagem recebida:", text)
+                print("Mensagem:", text)
 
                 resposta = executar_comando(text)
                 enviar_resposta(chat_id, resposta)
@@ -186,4 +185,10 @@ def main():
 # 🔹 START
 # =========================
 if __name__ == "__main__":
-    main()
+    # 🔹 inicia bot em paralelo
+    t = threading.Thread(target=rodar_bot)
+    t.start()
+
+    # 🔹 porta dinâmica do Render
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
