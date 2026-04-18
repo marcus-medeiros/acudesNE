@@ -1,18 +1,16 @@
 import requests
 from datetime import datetime
-import time
-import threading
-from flask import Flask
+from flask import Flask, request
 import os
 
-# 🔹 TOKEN (coloque no Render como variável de ambiente)
+# 🔹 TOKEN (mantido como você pediu)
 TOKEN = "8101772535:AAEp4qLZf2zvM0TNPcMiEi7qwsf_ym1tsrg"
 URL_TELEGRAM = f"https://api.telegram.org/bot{TOKEN}"
 
 # 🔹 API ANA
 URL_ANA = "https://www.ana.gov.br/sar/restportal/api/retornaMedicoes"
 
-# 🔹 FAVORITOS
+# 🔹 FAVORITOS (mantidos)
 FAV_PB = ["FARINHA","MÃE D'ÁGUA","CUREMA", "JATOBÁ I"]
 FAV_RN = ["ARMANDO RIBEIRO", "OITICICA", "UMARÍ"]
 
@@ -21,7 +19,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "🤖 Bot rodando!"
+    return "🤖 Bot rodando (webhook)!"
 
 
 # =========================
@@ -37,11 +35,10 @@ def get_menu():
         "resize_keyboard": True
     }
 
-# =========================
-# MENSAGEM DO MENU
-# =========================
 def add_name():
-    return "📌 *Selecione uma opção abaixo:*\n\n_by: Marcus (mvm)"
+    return "📌 Selecione uma opção abaixo:\n\n_by: Marcus (mvm)"
+
+
 # =========================
 # 🔹 UTIL
 # =========================
@@ -83,7 +80,6 @@ def get_acudes(uf, filtro=None):
                 continue
 
         cidade = (d.get("municipio") or "Sem cidade").title()
-        volume = d.get("volume") or "-"
         percentual = d.get("volumeUtil") or "-"
         data = d.get("data") or "-"
 
@@ -96,12 +92,6 @@ def get_acudes(uf, filtro=None):
 # =========================
 # 🔹 TELEGRAM
 # =========================
-def get_updates(offset=None):
-    url = f"{URL_TELEGRAM}/getUpdates"
-    params = {"timeout": 10, "offset": offset}
-    return requests.get(url, params=params, timeout=15).json()
-
-
 def send_message(chat_id, text, keyboard=None):
     url = f"{URL_TELEGRAM}/sendMessage"
 
@@ -121,20 +111,18 @@ def enviar_resposta(chat_id, resposta):
 
     if isinstance(resposta, list):
         for msg in resposta:
-            partes = dividir_mensagem(msg)
-            for p in partes:
+            for p in dividir_mensagem(msg):
                 send_message(chat_id, p, menu)
     else:
-        partes = dividir_mensagem(resposta)
-        for p in partes:
+        for p in dividir_mensagem(resposta):
             send_message(chat_id, p, menu)
 
 
 # =========================
-# 🔹 COMANDOS / MENU
+# 🔹 COMANDOS
 # =========================
 def executar_comando(texto):
-    comando = texto.upper()
+    comando = texto.upper().strip()
 
     if comando in ["📊 AÇUDES PB", "/ACUDESPB"]:
         pb = "\n".join(get_acudes("PB"))
@@ -152,7 +140,7 @@ def executar_comando(texto):
         rn = "\n".join(get_acudes("RN", "fav"))
         return f"⭐ AÇUDES RN (FAVORITOS)\n\n{rn}"
 
-    elif comando in ["📍 TODOS", "/ACUDES"]:
+    elif comando in ["📍 AÇUDES", "/ACUDES"]:
         pb = "\n".join(get_acudes("PB"))
         rn = "\n".join(get_acudes("RN"))
         return [
@@ -173,48 +161,28 @@ def executar_comando(texto):
 
 
 # =========================
-# 🔹 LOOP DO BOT
+# 🔹 WEBHOOK
 # =========================
-def rodar_bot():
-    update_id = None
-    print("🤖 Bot rodando...")
+@app.route(f"/{TOKEN}", methods=["POST"])
+def webhook():
+    data = request.json
 
-    while True:
-        try:
-            updates = get_updates(update_id)
+    if "message" in data:
+        message = data["message"]
+        chat_id = message["chat"]["id"]
+        text = message.get("text", "")
 
-            if not updates.get("ok"):
-                time.sleep(1)
-                continue
+        print("Mensagem:", text)
 
-            for item in updates.get("result", []):
-                update_id = item["update_id"] + 1
+        resposta = executar_comando(text)
+        enviar_resposta(chat_id, resposta)
 
-                if "message" not in item:
-                    continue
-
-                message = item["message"]
-                chat_id = message["chat"]["id"]
-                text = message.get("text", "")
-
-                print("Mensagem:", text)
-
-                resposta = executar_comando(text)
-                enviar_resposta(chat_id, resposta)
-
-            time.sleep(0.5)
-
-        except Exception as e:
-            print("Erro:", e)
-            time.sleep(2)
+    return "ok"
 
 
 # =========================
 # 🔹 START
 # =========================
 if __name__ == "__main__":
-    t = threading.Thread(target=rodar_bot)
-    t.start()
-
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
